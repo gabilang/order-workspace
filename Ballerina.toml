@@ -1,0 +1,2 @@
+[workspace]
+packages = ["order_commons", "orders_api", "order_agent", "daily_summary"]
