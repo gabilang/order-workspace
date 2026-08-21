@@ -2,7 +2,7 @@ import ballerina/http;
 
 import gabilan/order_commons as commons;
 
-configurable int servicePort = ?;
+configurable int servicePort = 9090;
 
 # Order management API backing the order agent and the daily summary automation.
 service /orders on new http:Listener(servicePort) {

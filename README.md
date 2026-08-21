@@ -82,20 +82,22 @@ daily_summary/target/bin/daily_summary.jar
 
 ## Configuration
 
-Each integration declares required `configurable` variables with no defaults, supplied through a per-package
-`Config.toml` (gitignored).
+Each integration reads its settings from a per-package `Config.toml` (gitignored). Only `openAiApiKey` has no
+default and must be supplied.
 
 | Package | Variable | Example |
 |---|---|---|
-| `orders_api` | `servicePort` | `9090` |
-| `order_agent` | `agentPort` | `9091` |
-| | `ordersApiUrl` | `"http://localhost:9090/orders"` |
+| `orders_api` | `servicePort` | `9090` (default) |
+| `order_agent` | `ordersApiUrl` | `"http://localhost:9090/orders"` |
 | | `openAiApiKey` | *your OpenAI key* |
 | `daily_summary` | `ordersApiUrl` | `"http://localhost:9090/orders"` |
 | | `orderAgentUrl` | `"http://localhost:9091/orderAgent"` |
 
 The agent uses `ballerinax/ai.openai` with `GPT_4O_MINI`; swap the model provider in `order_agent/agent.bal` to
 use a different LLM.
+
+The agent's listener port is the literal `9091` in `order_agent/agent.bal` rather than a `configurable`. See
+[OpenAPI export](#openapi-export) for why.
 
 ## Run
 
@@ -114,6 +116,30 @@ BAL_CONFIG_FILES=$PWD/daily_summary/Config.toml bal run daily_summary
 ```
 
 Running from inside a package directory works too, and picks up that package's `Config.toml` automatically.
+
+## OpenAPI export
+
+```bash
+bal build --export-openapi
+```
+
+writes a spec per HTTP-facing integration:
+
+```
+orders_api/target/openapi/orders_openapi.yaml
+order_agent/target/openapi/orderAgent_openapi.yaml
+```
+
+Two things the export imposes on how listener ports are written:
+
+- **`http:Listener` ports must have a default.** `configurable int servicePort = ?;` fails the build with
+  *"The configurable value provided for the port should have a default value to generate the server details"*,
+  because the generator has no value to put in `servers:`. Hence `configurable int servicePort = 9090;` in
+  `orders_api/service.bal` — still overridable at runtime, and the default is what lands in the spec.
+- **`ai:Listener` ports must be literals.** The `ai` OpenAPI extension resolves only an integer literal — a
+  `configurable`, a `const`, or a referenced `http:Listener` all fall back to `9090` with a warning, which
+  would make the agent's spec advertise the orders API's port. `order_agent/agent.bal` therefore pins
+  `new (listenOn = 9091)`.
 
 ## Try it
 

@@ -2,7 +2,6 @@ import ballerina/ai;
 import ballerinax/ai.openai;
 
 configurable string openAiApiKey = ?;
-configurable int agentPort = ?;
 
 final ai:ModelProvider orderModel = check new openai:ModelProvider(
     apiKey = openAiApiKey,
@@ -21,7 +20,9 @@ final ai:Agent orderAgent = check new (
     tools = [listPendingOrders, getOrderDetails, getOrderSummary, shipOrder]
 );
 
-listener ai:Listener agentListener = new (listenOn = agentPort);
+// The port is a literal, not a `configurable`: the `ai` OpenAPI extension can only read a literal
+// and silently falls back to 9090 for anything else, which would collide with `orders_api`.
+listener ai:Listener agentListener = new (listenOn = 9091);
 
 service /orderAgent on agentListener {
 
